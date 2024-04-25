@@ -6,6 +6,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..courses.models import Course
 from sqlalchemy.sql import func 
 
+
+
 @tee_times_bp.route('/generate', methods=['POST'])
 def generate_tee_times():
     data = request.json
@@ -87,4 +89,41 @@ def update_booking(booking_id):
     except KeyError:
         return jsonify({'error': 'Invalid status provided'}), 400
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Route to reserve Tee Time
+
+@tee_times_bp.route('/reserve', methods=['POST'])
+def reserve_tee_time():
+    member_id = request.json.get('member_id')
+    tee_time_id = request.json.get('tee_time_id')
+    players_to_reserve = request.json.get('players')  # New parameter to specify the number of players
+
+    # Fetch the tee time
+    tee_time = TeeTime.query.get(tee_time_id)
+    if not tee_time:
+        return jsonify({'error': 'Tee time not found'}), 404
+
+    # Check availability
+    if not tee_time.has_available_slots(players_to_reserve):  # Check availability for the specified number of players
+        return jsonify({'error': 'Not enough available slots for the specified number of players'}), 400
+
+    # Create bookings for each player
+    bookings = []
+    for _ in range(players_to_reserve):
+        booking = Booking(
+            member_id=member_id,
+            tee_time_id=tee_time_id,
+            status=BookingStatus.booked,
+            booked_at=datetime.utcnow()
+        )
+        bookings.append(booking)
+
+    # Add bookings to the session and commit to the database
+    db.session.add_all(bookings)
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Booking successful', 'booking_ids': [booking.id for booking in bookings]}), 201
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

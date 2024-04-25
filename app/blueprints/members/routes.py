@@ -63,5 +63,6 @@ def authenticate_member():
     member = Member.query.filter_by(email=data['email']).first()
     if member and check_password_hash(member.password_hash, data['password']):
         access_token = create_access_token(identity={'email': member.email, 'role': 'member'})
-        return jsonify(access_token=access_token), 200
+        # Include member_id in the response
+        return jsonify(access_token=access_token, member_id=member.id), 200
     return jsonify({"msg": "Invalid credentials"}), 401
