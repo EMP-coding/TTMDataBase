@@ -8,19 +8,24 @@ class TeeTime(db.Model):
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
-    available = db.Column(db.Boolean, default=True)
+    total_slots = db.Column(db.Integer, nullable=False, default=4)  
     bookings = db.relationship('Booking', backref='tee_time', lazy=True)
 
-class BookingStatus(enum.Enum): # Creating 
+    def is_available(self):
+        return len(self.bookings) < self.total_slots
+
+    def booking_count(self):
+        return len(self.bookings)
+
+class BookingStatus(enum.Enum):
     booked = "Booked"
     cancelled = "Cancelled"
     confirmed = "Confirmed"
 
 class Booking(db.Model):
     __tablename__ = 'booking'
-    status = db.Column(db.Enum(BookingStatus), default=BookingStatus.booked, nullable=False) # Creating a status column using enum to allow 3 states 
+    status = db.Column(db.Enum(BookingStatus), default=BookingStatus.booked, nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('member.id'))
     tee_time_id = db.Column(db.Integer, db.ForeignKey('tee_time.id'))
     booked_at = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(50), nullable=False, default='Booked')

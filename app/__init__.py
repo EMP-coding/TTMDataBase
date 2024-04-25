@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
+from flask_jwt_extended import JWTManager
 
 def create_app():
     load_dotenv()  
@@ -10,6 +11,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+    jwt = JWTManager(app)
 
     from .extensions import init_app
     
@@ -27,6 +29,6 @@ def create_app():
 
     app.register_blueprint(members_bp, url_prefix='/members')
     app.register_blueprint(staff_bp, url_prefix='/staff')
-    app.register_blueprint(tee_times_bp, url_prefix='/tee_times')
+    app.register_blueprint(tee_times_bp, url_prefix='/tee-times')
 
     return app
