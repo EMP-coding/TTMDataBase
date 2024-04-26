@@ -7,7 +7,7 @@ from flask_jwt_extended import JWTManager
 def create_app():
     load_dotenv()  
     app = Flask(__name__)
-    CORS(app)  # Enable CORS for the Flask app
+    CORS(app)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
@@ -15,14 +15,14 @@ def create_app():
 
     from .extensions import init_app
     
-    # Import models for each blueprint
+    # Imported models for each blueprint
     from .blueprints.members.models import Member
     from .blueprints.staff.models import  Staff
     from .blueprints.tee_times.models import TeeTime
 
     init_app(app)
 
-    # Import routes for each blueprint
+    # Imported routes for each blueprint
     from .blueprints.members.routes import members_bp  
     from .blueprints.staff.routes import staff_bp  
     from .blueprints.tee_times.routes import tee_times_bp  

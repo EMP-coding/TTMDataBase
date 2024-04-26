@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..courses.models import Course
 from sqlalchemy.sql import func 
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 
 
@@ -130,7 +130,7 @@ def reserve_tee_time():
         )
         bookings.append(booking)
 
-    # Add bookings to the session and commit to the database
+    
     db.session.add_all(bookings)
     try:
         db.session.commit()
@@ -138,3 +138,38 @@ def reserve_tee_time():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+    
+@tee_times_bp.route('/bookings/member/<int:member_id>', methods=['GET'])
+def get_bookings_by_member_id(member_id):
+    bookings = Booking.query.filter_by(member_id=member_id).join(TeeTime).all()
+    booking_details = [{
+        'id': booking.id,
+        'tee_time_id': booking.tee_time_id,
+        'booked_at': booking.booked_at.isoformat(),
+        'status': booking.status.name,
+        'tee_time_start': booking.tee_time.start_time.isoformat(),
+        'tee_time_end': booking.tee_time.end_time.isoformat(),
+        'course_name': booking.tee_time.course.course_name
+    } for booking in bookings]
+    return jsonify(booking_details)
+
+
+@tee_times_bp.route('/<int:tee_time_id>/member/<int:member_id>', methods=['DELETE'])
+# Ensure only authenticated users can access this route
+def delete_member_bookings(tee_time_id, member_id):
+    try:
+        # Delete bookings for the specified member and tee time
+        result = Booking.query.filter_by(tee_time_id=tee_time_id, member_id=member_id).delete()
+        db.session.commit()
+
+        if result > 0:
+            return jsonify({'message': f'Successfully deleted {result} bookings for member {member_id}.'}), 200
+        else:
+            return jsonify({'message': 'No bookings found for this member and tee time.'}), 404
+
+    except SQLAlchemyError as e:
+        db.session.rollback()  
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except Exception as e:
+        db.session.rollback()  
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500

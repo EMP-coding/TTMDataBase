@@ -1,4 +1,4 @@
-from ...extensions import db  # Adjust this import based on your project's structure
+from ...extensions import db  
 
 class Course(db.Model):
     __tablename__ = 'course'

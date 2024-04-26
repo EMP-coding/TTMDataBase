@@ -1,4 +1,4 @@
-from ...extensions import db  # Adjust this import based on your project's structure
+from ...extensions import db 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 

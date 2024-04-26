@@ -35,18 +35,18 @@ def add_member():
 def register_member():
     data = request.get_json()
 
-    # Define required fields
+    
     required_fields = ['first_name', 'last_name', 'email', 'password']
 
-    # Create a new Member instance with required fields
+    
     new_member_data = {field: data[field] for field in required_fields}
 
-    # Add optional fields with default value None if not present
+    
     optional_fields = ['phone', 'address', 'membership_type']
     for field in optional_fields:
         new_member_data[field] = data.get(field, None)
 
-    # Create a new Member instance with the validated data
+    
     new_member = Member(**new_member_data)
 
     db.session.add(new_member)
@@ -66,3 +66,43 @@ def authenticate_member():
         # Include member_id in the response
         return jsonify(access_token=access_token, member_id=member.id), 200
     return jsonify({"msg": "Invalid credentials"}), 401
+
+# Route to get member by id 
+@members_bp.route('/m/<int:member_id>', methods=['GET'])
+def get_member_by_id(member_id):
+    member = Member.query.get(member_id)
+    if not member:
+        return jsonify({'message': 'Member not found'}), 404
+    member_data = {
+        'id': member.id,
+        'first_name': member.first_name,
+        'last_name': member.last_name,
+        'email': member.email,
+        'phone': member.phone,
+        'address': member.address,
+        'membership_type': member.membership_type
+    }
+    return jsonify(member_data), 200
+
+# Route to update a member by id 
+
+@members_bp.route('/update/<int:member_id>', methods=['PUT'])
+def update_member(member_id):
+    member = Member.query.get(member_id)
+    if not member:
+        return jsonify({'error': 'Member not found'}), 404
+    
+    data = request.get_json()
+    try:
+        member.first_name = data.get('first_name', member.first_name)
+        member.last_name = data.get('last_name', member.last_name)
+        member.email = data.get('email', member.email)
+        member.phone = data.get('phone', member.phone)
+        member.address = data.get('address', member.address)
+        member.membership_type = data.get('membership_type', member.membership_type)
+        
+        db.session.commit()
+        return jsonify({'message': 'Member updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
