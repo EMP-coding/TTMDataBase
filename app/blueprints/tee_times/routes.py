@@ -5,29 +5,41 @@ from datetime import datetime, timedelta
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..courses.models import Course
 from sqlalchemy.sql import func 
+from sqlalchemy.exc import SQLAlchemyError
 
 
 
 @tee_times_bp.route('/generate', methods=['POST'])
 def generate_tee_times():
     data = request.json
-    course_id = data['course_id']
-    start_time = datetime.strptime(data['start_time'], '%Y-%m-%d %H:%M')
-    end_time = datetime.strptime(data['end_time'], '%Y-%m-%d %H:%M')
-    interval_minutes = data.get('interval_minutes', 10)
-    current_time = start_time
-    while current_time < end_time:
-        tee_time = TeeTime(
-            start_time=current_time,
-            end_time=current_time + timedelta(minutes=interval_minutes),
-            course_id=course_id,
-            available=True
-        )
-        db.session.add(tee_time)
-        current_time += timedelta(minutes=interval_minutes)
-    db.session.commit()
-    return jsonify({'message': 'Tee times generated successfully'}), 201
-
+    try:
+        course_id = data['course_id']
+        start_time = datetime.strptime(data['start_time'], '%Y-%m-%d %H:%M')
+        end_time = datetime.strptime(data['end_time'], '%Y-%m-%d %H:%M')
+        interval_minutes = data.get('interval_minutes', 10)
+        
+        current_time = start_time
+        while current_time < end_time:
+            tee_time = TeeTime(
+                start_time=current_time,
+                end_time=current_time + timedelta(minutes=interval_minutes),
+                course_id=course_id
+            )
+            db.session.add(tee_time)
+            current_time += timedelta(minutes=interval_minutes)
+        
+        db.session.commit()
+        return jsonify({'message': 'Tee times generated successfully'}), 201
+    except KeyError as e:
+        return jsonify({'error': f'Missing required parameter: {str(e)}'}), 400
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': 'Database error'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 # Route to get all Tee Times (should be staff only)
 @tee_times_bp.route('/all', methods=['GET'])  
 def get_tee_times():
@@ -37,7 +49,6 @@ def get_tee_times():
         'start_time': tee.start_time.isoformat(),
         'end_time': tee.end_time.isoformat(),
         'course_id': tee.course_id,
-        'available': tee.available
     } for tee in tee_times]
     return jsonify(tee_times_list)
 
