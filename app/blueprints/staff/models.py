@@ -1,4 +1,4 @@
-from ...extensions import db  # Adjust this import based on your project's structure
+from ...extensions import db  
 from ...blueprints.courses.models import Club
 
 class Staff(db.Model):
@@ -9,12 +9,11 @@ class Staff(db.Model):
     position = db.Column(db.String(255))
     email = db.Column(db.String(255), unique=True)
     phone = db.Column(db.String(20))
-    pin = db.Column(db.String(4))  # Assuming PIN is always 4 digits, stored directly
+    pin = db.Column(db.String(4))  
     club_id = db.Column(db.Integer, db.ForeignKey('club.id'), nullable=False)
     club = db.relationship('Club', back_populates='staff')
 
-    # Remove the property that blocks reading the password
-    # and replace it with a method to directly check the pin
+
     def verify_pin(self, pin):
         """Verify the pin directly without hashing."""
         return self.pin == pin
