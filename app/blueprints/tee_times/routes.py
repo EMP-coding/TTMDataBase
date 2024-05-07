@@ -1,14 +1,16 @@
 from flask import request, jsonify
 from . import tee_times_bp
-from .models import db, TeeTime, Booking, BookingStatus
-from datetime import datetime, timedelta
+from .models import db, TeeTime, Booking, BookingStatusTwo
+from datetime import datetime, timedelta, date
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..courses.models import Course
+from ..course.models import Course
 from sqlalchemy.sql import func 
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+import enum
 
 
 
+# Route to generate Tee Times
 @tee_times_bp.route('/generate', methods=['POST'])
 def generate_tee_times():
     data = request.json
@@ -39,8 +41,8 @@ def generate_tee_times():
         return jsonify({'error': 'Database error'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-# Route to get all Tee Times (should be staff only)
+
+# Route to get all Tee Times
 @tee_times_bp.route('/all', methods=['GET'])  
 def get_tee_times():
     tee_times = TeeTime.query.all()
@@ -83,9 +85,7 @@ def get_available_tee_times():
 
     return jsonify(available_tee_times_list)
 
-
-# Updated the route definition to use tee_times_bp instead of app
-# Route to update a scheduled teetime 
+# Route to update a booking
 @tee_times_bp.route('/bookings/<int:booking_id>', methods=['PUT'])
 def update_booking(booking_id):
     data = request.get_json()
@@ -94,7 +94,7 @@ def update_booking(booking_id):
         return jsonify({'error': 'Booking not found'}), 404
 
     try:
-        booking.status = BookingStatus[data['status']]
+        booking.status = BookingStatusTwo[data['status']]
         db.session.commit()
         return jsonify({'message': 'Booking status updated successfully'}), 200
     except KeyError:
@@ -103,7 +103,6 @@ def update_booking(booking_id):
         return jsonify({'error': str(e)}), 500
 
 # Route to reserve Tee Time
-
 @tee_times_bp.route('/reserve', methods=['POST'])
 def reserve_tee_time():
     member_id = request.json.get('member_id')
@@ -125,7 +124,7 @@ def reserve_tee_time():
         booking = Booking(
             member_id=member_id,
             tee_time_id=tee_time_id,
-            status=BookingStatus.booked,
+            status=BookingStatusTwo.BOOKED,
             booked_at=datetime.utcnow()
         )
         bookings.append(booking)
@@ -138,24 +137,35 @@ def reserve_tee_time():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-    
+
+# Route to get bookings by member ID
+
 @tee_times_bp.route('/bookings/member/<int:member_id>', methods=['GET'])
 def get_bookings_by_member_id(member_id):
-    bookings = Booking.query.filter_by(member_id=member_id).join(TeeTime).all()
-    booking_details = [{
-        'id': booking.id,
-        'tee_time_id': booking.tee_time_id,
-        'booked_at': booking.booked_at.isoformat(),
-        'status': booking.status.name,
-        'tee_time_start': booking.tee_time.start_time.isoformat(),
-        'tee_time_end': booking.tee_time.end_time.isoformat(),
-        'course_name': booking.tee_time.course.course_name
-    } for booking in bookings]
-    return jsonify(booking_details)
+    try:
+        bookings = Booking.query.filter_by(member_id=member_id).join(TeeTime).all()
+        if not bookings:
+            return jsonify({'message': 'No bookings found for this member.'}), 404
 
+        booking_details = [{
+            'id': booking.id,
+            'tee_time_id': booking.tee_time_id,
+            'booked_at': booking.booked_at.isoformat(),
+            'status': booking.status.value,
+            'tee_time_start': booking.tee_time.start_time.isoformat(),
+            'tee_time_end': booking.tee_time.end_time.isoformat(),
+            'course_name': booking.tee_time.course.course_name
+        } for booking in bookings]
 
+        return jsonify(booking_details)
+    except SQLAlchemyError as e:
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+    
+
+# Route to delete bookings for a member and tee time
 @tee_times_bp.route('/<int:tee_time_id>/member/<int:member_id>', methods=['DELETE'])
-# Ensure only authenticated users can access this route
 def delete_member_bookings(tee_time_id, member_id):
     try:
         # Delete bookings for the specified member and tee time
@@ -173,3 +183,40 @@ def delete_member_bookings(tee_time_id, member_id):
     except Exception as e:
         db.session.rollback()  
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
+# Route to get bookings by tee time for a selected date
+@tee_times_bp.route('/bookings', methods=['GET'])
+def get_bookings_by_tee_time():
+    selected_date_str = request.args.get('date')
+    if not selected_date_str:
+        return jsonify({'error': 'Date parameter is required.'}), 400
+
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Please use YYYY-MM-DD format.'}), 400
+
+    tee_times = TeeTime.query.filter(
+        func.date(TeeTime.start_time) == selected_date
+    ).all()
+
+    tee_times_with_bookings = []
+    for tee_time in tee_times:
+        tee_time_dict = {
+            'id': tee_time.id,
+            'start_time': tee_time.start_time.isoformat(),
+            'end_time': tee_time.end_time.isoformat(),
+            'course_id': tee_time.course_id,
+            'bookings': []  # Initialize an empty list to store bookings
+        }
+        for booking in tee_time.bookings:
+            booking_data = {
+                'booking_id': booking.id,
+                'member_id': booking.member_id,
+                'status': booking.status.value,  # Use the enum value for the status
+                'booked_at': booking.booked_at.isoformat()
+            }
+            tee_time_dict['bookings'].append(booking_data)  # Append booking data to the list
+        tee_times_with_bookings.append(tee_time_dict)
+
+    return jsonify(tee_times_with_bookings)

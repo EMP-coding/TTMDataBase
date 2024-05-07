@@ -1,5 +1,5 @@
 from ...extensions import db  
-from ...blueprints.courses.models import Club
+from ...blueprints.course.models import Club
 
 class Staff(db.Model):
     __tablename__ = 'staff'
@@ -15,5 +15,4 @@ class Staff(db.Model):
 
 
     def verify_pin(self, pin):
-        """Verify the pin directly without hashing."""
         return self.pin == pin

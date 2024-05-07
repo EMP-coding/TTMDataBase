@@ -4,6 +4,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
 
+
 def create_app():
     load_dotenv()  
     app = Flask(__name__)
@@ -19,6 +20,7 @@ def create_app():
     from .blueprints.members.models import Member
     from .blueprints.staff.models import  Staff
     from .blueprints.tee_times.models import TeeTime
+    from .blueprints.course.models import Course
 
     init_app(app)
 
@@ -26,9 +28,11 @@ def create_app():
     from .blueprints.members.routes import members_bp  
     from .blueprints.staff.routes import staff_bp  
     from .blueprints.tee_times.routes import tee_times_bp  
+    from .blueprints.course.routes import course_bp
 
     app.register_blueprint(members_bp, url_prefix='/members')
     app.register_blueprint(staff_bp, url_prefix='/staff')
     app.register_blueprint(tee_times_bp, url_prefix='/tee-times')
+    app.register_blueprint(course_bp, url_prefix='/course')
 
     return app

@@ -28,15 +28,23 @@ class TeeTime(db.Model):
     def booking_count(self):
         return len(self.bookings)
 
-class BookingStatus(enum.Enum):
-    booked = "Booked"
-    cancelled = "Cancelled"
-    confirmed = "Confirmed"
+class BookingStatusTwo(enum.Enum):
+    BOOKED = "BOOKED"
+    CANCELLED = "CANCELLED"
+    CHECKED_IN = "CHECKED_IN"
 
 class Booking(db.Model):
     __tablename__ = 'booking'
-    status = db.Column(db.Enum(BookingStatus), default=BookingStatus.booked, nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('member.id'))
     tee_time_id = db.Column(db.Integer, db.ForeignKey('tee_time.id'))
+    status = db.Column(db.Enum(BookingStatusTwo), default=BookingStatusTwo.BOOKED, nullable=False)
     booked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    payment_status = db.Column(db.String(50))  # 'Pending', 'Completed', 'Refunded'
+    amount_paid = db.Column(db.Numeric(10, 2))  
+
+    def __repr__(self):
+        return f'<Booking {self.id} - Status: {self.status}>'
+    
+

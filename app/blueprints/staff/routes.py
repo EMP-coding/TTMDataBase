@@ -29,6 +29,6 @@ def authenticate_staff():
     staff = Staff.query.filter_by(email=data['email']).first()
     if staff and staff.verify_pin(data['pin']):
         access_token = create_access_token(identity={'email': staff.email, 'role': 'staff'})
-        return jsonify({"access_token": access_token, "staff_id": staff.id}), 200
+        return jsonify({"access_token": access_token, "staff_id": staff.id, "club_id": staff.club_id}), 200
     else:
         return jsonify({"msg": "Invalid email or pin"}), 401
