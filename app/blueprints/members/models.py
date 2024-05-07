@@ -12,6 +12,8 @@ class Member(db.Model):
     address = db.Column(db.Text)
     membership_type = db.Column(db.String(100))
     password_hash = db.Column(db.String(255))
+    club_id = db.Column(db.Integer, db.ForeignKey('club.id'))  # Foreign key to the club table
+    club = db.relationship('Club', backref=db.backref('members', lazy=True))  # Establishing the relationship
     bookings = db.relationship('Booking', backref='member', lazy=True)
 
     @property

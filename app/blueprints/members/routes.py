@@ -60,11 +60,12 @@ def register_member():
 @members_bp.route('/login', methods=['POST'])
 def authenticate_member():
     data = request.get_json()
+    # Ensure the member query includes the club_id by joining with the Club table if necessary
     member = Member.query.filter_by(email=data['email']).first()
     if member and check_password_hash(member.password_hash, data['password']):
-        access_token = create_access_token(identity={'email': member.email, 'role': 'member'})
-        # Include member_id in the response
-        return jsonify(access_token=access_token, member_id=member.id), 200
+        access_token = create_access_token(identity={'email': member.email, 'role': 'member', 'club_id': member.club_id})
+        # Include member_id and club_id in the response
+        return jsonify(access_token=access_token, member_id=member.id, club_id=member.club_id), 200
     return jsonify({"msg": "Invalid credentials"}), 401
 
 # Route to get member by id 
