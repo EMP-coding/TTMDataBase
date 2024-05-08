@@ -57,11 +57,25 @@ def get_tee_times():
 # Route to get available Tee Times
 @tee_times_bp.route('/available', methods=['GET'])
 def get_available_tee_times():
+    course_id = request.args.get('course_id', type=int)
+    date_str = request.args.get('date')
+    if not course_id or not date_str:
+        return jsonify({'error': 'course_id and date are required'}), 400
+
+    try:
+        # Ensure the date is in YYYY-MM-DD format
+        date = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+
+    # Calculate the end of the day for the date filter
+    day_end = date + timedelta(days=1)
+
     subq = db.session.query(
-        Booking.tee_time_id, 
+        Booking.tee_time_id,
         func.count('*').label('booking_count')
     ).group_by(Booking.tee_time_id).subquery()
-    
+
     available_tee_times = db.session.query(
         TeeTime.id,
         TeeTime.start_time,
@@ -71,6 +85,8 @@ def get_available_tee_times():
         (TeeTime.total_slots - func.coalesce(subq.c.booking_count, 0)).label('available_slots')
     ).outerjoin(subq, TeeTime.id == subq.c.tee_time_id)\
     .join(Course)\
+    .filter(TeeTime.course_id == course_id)\
+    .filter(TeeTime.start_time >= date, TeeTime.start_time < day_end)\
     .filter(TeeTime.total_slots > func.coalesce(subq.c.booking_count, 0))\
     .all()
 
