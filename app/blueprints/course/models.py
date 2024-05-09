@@ -8,6 +8,7 @@ class Course(db.Model):
     number_of_holes = db.Column(db.Integer)
     club_id = db.Column(db.Integer, db.ForeignKey('club.id'))
     tee_times = db.relationship('TeeTime', backref='course', lazy=True)
+    course_image = db.Column(db.String(300))
 
 class Club(db.Model):
     __tablename__ = 'club'
