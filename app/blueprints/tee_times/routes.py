@@ -229,10 +229,10 @@ def get_bookings_by_tee_time():
             booking_data = {
                 'booking_id': booking.id,
                 'member_id': booking.member_id,
-                'status': booking.status.value,  # Use the enum value for the status
+                'status': booking.status.value,  
                 'booked_at': booking.booked_at.isoformat()
             }
-            tee_time_dict['bookings'].append(booking_data)  # Append booking data to the list
+            tee_time_dict['bookings'].append(booking_data)  
         tee_times_with_bookings.append(tee_time_dict)
 
     return jsonify(tee_times_with_bookings)
