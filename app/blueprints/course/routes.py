@@ -19,7 +19,8 @@ def get_courses_by_club_id(club_id):
         'id': course.id,
         'course_name': course.course_name,
         'location': course.location,
-        'number_of_holes': course.number_of_holes
+        'number_of_holes': course.number_of_holes,
+        'course_image': course.course_image
     } for course in courses]
 
     
