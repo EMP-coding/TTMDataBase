@@ -63,7 +63,7 @@ def get_available_tee_times():
         return jsonify({'error': 'course_id and date are required'}), 400
 
     try:
-        # Ensure the date is in YYYY-MM-DD format
+        
         date = datetime.strptime(date_str, '%Y-%m-%d')
     except ValueError:
         return jsonify({'error': 'invalid date format'}), 400
